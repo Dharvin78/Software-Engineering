@@ -2,15 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Box, Heading, Flex, Text, Button, VStack } from "@chakra-ui/react";
-import FilterBar from "@/components/ui/FilterBar";
-
-interface Filters {
-  file_type: string;
-  uploaded_by: string;
-  start_date: string;
-  end_date: string;
-  tag: string;
-}
 
 interface Asset {
   name: string;
@@ -22,18 +13,8 @@ interface Asset {
 }
 
 export default function AssetPreviewPage() {
-  // Simulate logged-in user
-  const currentUser = { username: "alice", role: "user" }; 
-  // For admin, set role: "admin"
-
+  const currentUser = { username: "alice", role: "user" }; // or "admin"
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [filters, setFilters] = useState<Filters>({
-    file_type: "",
-    uploaded_by: currentUser.role === "admin" ? "" : currentUser.username,
-    start_date: "",
-    end_date: "",
-    tag: "",
-  });
 
   useEffect(() => {
     const stored = localStorage.getItem("uploaded_assets");
@@ -49,44 +30,8 @@ export default function AssetPreviewPage() {
     localStorage.setItem("uploaded_assets", JSON.stringify(updatedAssets));
   };
 
-  const applyFilters = () => {
-    const stored = localStorage.getItem("uploaded_assets");
-    if (!stored) return;
-    let allAssets: Asset[] = JSON.parse(stored);
-
-    if (currentUser.role !== "admin") {
-      allAssets = allAssets.filter((a) => a.uploaded_by === currentUser.username);
-    } else if (filters.uploaded_by) {
-      allAssets = allAssets.filter((a) => a.uploaded_by === filters.uploaded_by);
-    }
-
-    if (filters.file_type) allAssets = allAssets.filter((a) => a.file_type === filters.file_type);
-    if (filters.tag) allAssets = allAssets.filter((a) => a.tags.includes(filters.tag));
-    if (filters.start_date)
-      allAssets = allAssets.filter((a) => new Date(a.uploaded_at) >= new Date(filters.start_date));
-    if (filters.end_date)
-      allAssets = allAssets.filter((a) => new Date(a.uploaded_at) <= new Date(filters.end_date));
-
-    setAssets(allAssets);
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      file_type: "",
-      uploaded_by: currentUser.role === "admin" ? "" : currentUser.username,
-      start_date: "",
-      end_date: "",
-      tag: "",
-    });
-
-    const stored = localStorage.getItem("uploaded_assets");
-    if (!stored) return;
-    const allAssets: Asset[] = JSON.parse(stored);
-    if (currentUser.role === "admin") setAssets(allAssets);
-    else setAssets(allAssets.filter((a) => a.uploaded_by === currentUser.username));
-  };
-
   const handleDelete = (idx: number) => {
+    if (!confirm("Delete this asset?")) return;
     const updated = assets.filter((_, i) => i !== idx);
     saveAssets(updated);
   };
@@ -101,15 +46,7 @@ export default function AssetPreviewPage() {
 
   return (
     <Box p={8}>
-      <Heading mb={4}>My Assets Preview</Heading>
-
-      <FilterBar
-        filters={filters}
-        setFilters={setFilters}
-        onApply={applyFilters}
-        onClear={clearFilters}
-        showUploadedBy={currentUser.role === "admin"} // only admin can filter by uploaded_by
-      />
+      <Heading mb={4}>My Asset Previews</Heading>
 
       <Flex wrap="wrap" gap="1rem">
         {assets.length > 0 ? (
@@ -128,18 +65,17 @@ export default function AssetPreviewPage() {
               <p>Uploaded at: {new Date(asset.uploaded_at).toLocaleDateString()}</p>
 
               {asset.file_type === "image" && asset.preview && (
-                <img
-                  src={asset.preview}
-                  alt={asset.name}
-                  style={{ width: "100%", marginTop: "0.5rem" }}
-                />
+                <img src={asset.preview} alt={asset.name} style={{ width: "100%", marginTop: "0.5rem" }} />
               )}
+
               {asset.file_type === "video" && asset.preview && (
-                <video
-                  src={asset.preview}
-                  controls
-                  style={{ width: "100%", marginTop: "0.5rem" }}
-                />
+                <video src={asset.preview} controls style={{ width: "100%", marginTop: "0.5rem" }} />
+              )}
+
+              {!asset.preview && (
+                <Text mt={2} fontSize="sm" color="gray.500">
+                  No preview available
+                </Text>
               )}
 
               <VStack mt={2} gap={1}>
