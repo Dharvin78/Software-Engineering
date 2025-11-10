@@ -107,9 +107,7 @@ export default function HomePage() {
       const params = new URLSearchParams();
       if (selectedUser) params.set('user', selectedUser);
       if (tags.length) params.set('tag', tags.map((t) => t.value).join(','));
-      if (category && category !== 'all') {
-        params.set('category', category);
-      }
+      if (category && category !== 'all') params.set('category', category);
       if (dateFrom) params.set('date_from', dateFrom);
       if (dateTo) params.set('date_to', dateTo);
       if (debouncedSearchTerm) params.set('keyword', debouncedSearchTerm);
