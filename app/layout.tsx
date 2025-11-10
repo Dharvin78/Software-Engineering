@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import { Provider } from "@/components/ui/provider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AssetsProvider } from "@/contexts/AssetsContext";
 
 interface RootLayoutProps {
   children: ReactNode;
@@ -14,7 +15,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
       <body>
         <Provider>
           <AuthProvider>
-            {children}
+            <AssetsProvider> 
+              {children}
+            </AssetsProvider>
           </AuthProvider>
         </Provider>
       </body>

@@ -1,15 +1,8 @@
 "use client";
 
+
 import { useState } from "react";
-import {
-  Box,
-  Button,
-  Input,
-  Heading,
-  Stack,
-  Text,
-  Link as ChakraLink,
-} from "@chakra-ui/react";
+import { Box, Button, Container, Input, Heading, Stack, Text, Link as ChakraLink } from "@chakra-ui/react";
 import NextLink from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -38,7 +31,7 @@ export default function SignupPage() {
 
     try {
       await signup({ email, username, password, password2 });
-      router.push("/login"); 
+      router.push("/login"); // redirect after signup
     } catch (error: any) {
       let message = error?.message || "Signup failed. Please try again.";
       try {
@@ -51,7 +44,6 @@ export default function SignupPage() {
       setIsLoading(false);
     }
   };
-
   return (
     <Box
       minH="100vh"
@@ -95,6 +87,7 @@ export default function SignupPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  autoComplete="email"
                 />
               </Box>
 
@@ -105,6 +98,7 @@ export default function SignupPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
+                  autoComplete="username"
                 />
               </Box>
 
@@ -115,6 +109,7 @@ export default function SignupPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  autoComplete="new-password"
                 />
               </Box>
 
@@ -125,13 +120,14 @@ export default function SignupPage() {
                   value={password2}
                   onChange={(e) => setPassword2(e.target.value)}
                   required
+                  autoComplete="new-password"
                 />
               </Box>
 
               <Stack gap={6}>
                 <Button colorScheme="blue" type="submit" loading={isLoading}>
-                  Sign up
-                </Button>
+                Sign up
+              </Button>
 
                 <Text textAlign="center">
                   Already have an account?{" "}
