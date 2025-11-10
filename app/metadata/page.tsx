@@ -168,7 +168,7 @@ const handleDelete = async (id: number) => {
             <Text>ID</Text>
             <Text>Name</Text>
             <Text>Category</Text>
-            <Text>Size</Text>
+            <Text>Size(Bytes)</Text>
             <Text>Timestamp</Text>
             <Text>Description</Text>
             <Text>Storage Path</Text>
