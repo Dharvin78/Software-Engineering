@@ -11,21 +11,25 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const { login } = useAuth(); 
+  const { login } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setErrorMessage(""); 
-    try {
-      await login(email, password);
-      router.push("/homepage");
-    } catch (error: any) {
-      setErrorMessage(error?.message || "Invalid email or password.");
-      setIsLoading(false);
-    }
-  };
+  // Login page
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
+  setErrorMessage("");
+
+  try {
+    await login(email, password); // call login from context
+    router.push("/homepage"); // redirect on success
+  } catch (error: any) {
+    // Safe error handling
+    setErrorMessage(error?.message || "Login failed. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <Container minH="100vh" display="flex" alignItems="center" justifyContent="center">
@@ -45,16 +49,28 @@ export default function LoginPage() {
 
               <Box>
                 <Text mb={1}>Email address</Text>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
               </Box>
 
               <Box>
                 <Text mb={1}>Password</Text>
-                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
               </Box>
 
               <Box textAlign="right" mb={2}>
-                <ChakraLink as={NextLink} href="/forgotPassword" color="blue.400">
+                <ChakraLink as={NextLink} href="/forgot_password" color="blue.400">
                   Forgot password?
                 </ChakraLink>
               </Box>

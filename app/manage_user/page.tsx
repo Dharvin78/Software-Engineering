@@ -1,146 +1,238 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import api, { setAuthToken } from "@/lib/api";
+import { useState, useEffect } from 'react';
 import {
   Box,
-  Button,
   Stack,
   Heading,
   Text,
+  Button,
   Spinner,
-} from "@chakra-ui/react";
-import { useAuth } from "@/contexts/AuthContext";
-import Navbar from "@/components/ui/navbar";
-
-const dummyUser = { username: "admin1", role: "admin" };
+  Center,
+  VStack,
+  HStack,
+  Tag,
+} from '@chakra-ui/react';
+import { useAuth } from '@/contexts/AuthContext';
+import Navbar from '@/components/ui/navbar';
 
 interface User {
   id: number;
   username: string;
   email: string;
+  role: string;
   is_active: boolean;
-  is_superuser: boolean;
+  date_joined: string;
 }
 
-export default function ManageUsersPage() {
-  const { token, user } = useAuth();
+const API_URL = 'http://localhost:8000/api/users/';
+
+export default function ManageUserPage() {
+  const { token } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const fetchUsers = async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const res = await fetch(API_URL, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch users');
+      const data = await res.json();
+      setUsers(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-  setLoading(true);
+    fetchUsers();
+  }, [token]);
 
-  const timer = setTimeout(() => {
-    setUsers([
-      { id: 1, username: "admin1", email: "admin@example.com", is_active: true, is_superuser: true },
-      { id: 2, username: "john_doe", email: "john@example.com", is_active: true, is_superuser: false },
-      { id: 3, username: "jane_doe", email: "jane@example.com", is_active: false, is_superuser: false },
-    ]);
-    setLoading(false);
-  }, 1000);
-
-  return () => clearTimeout(timer);
-}, []); 
-
-  const toggleActive = (user: User) => {
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === user.id ? { ...u, is_active: !u.is_active } : u
-      )
-    );
+  const handleChangeRole = async (userId: number, newRole: string) => {
+    if (!token) return;
+    try {
+      await fetch(`${API_URL}${userId}/change-role/`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ role: newRole }),
+      });
+      fetchUsers();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  // ✅ Delete locally
-  const deleteUser = (id: number) => {
-    setUsers((prev) => prev.filter((u) => u.id !== id));
+  const handleToggleActive = async (userId: number, isActive: boolean) => {
+    if (!token) return;
+    try {
+      await fetch(`${API_URL}${userId}/toggle-active/`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ is_active: !isActive }),
+      });
+      fetchUsers();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
+  const handleDeleteUser = async (userId: number) => {
+    if (!token) return;
 
-    // const fetchUsers = async () => {
-      //try {
-        //const resp = await api.get("/users/");
-        //setUsers(resp.data);
-     // } catch (err) {
-       // console.error(err);
-    //  } finally {
-       // setLoading(false);
-    //  }
-   // };
+    const confirmed = window.confirm("Are you sure you want to delete this user?");
+    if (!confirmed) return;
 
-    //fetchUsers();
- // }, [token]);
+    try {
+      const res = await fetch(`${API_URL}${userId}/`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-  //const toggleActive = async (user: User) => {
-    //try {
-     // if (user.is_active) {
-       // await api.post(`/users/${user.id}/deactivate/`);
-    //  } else {
-        //await api.post(`/users/${user.id}/activate/`);
-    //  }
-      //setUsers((prev) =>
-        //prev.map((u) => (u.id === user.id ? { ...u, is_active: !u.is_active } : u))
-    //  );
-   // } catch (err) {
-   //   console.error(err);
-   // }
- // };
+      if (!res.ok) throw new Error("Delete failed");
 
-  //const deleteUser = async (id: number) => {
-    //try {
-     // await api.delete(`/users/${id}/`);
-      //setUsers((prev) => prev.filter((u) => u.id !== id));
-  //  } catch (err) {
-    //  console.error(err);
-  //  }
- // };
+      // Update the frontend state
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
 
-  return (
-    <>
-      {/* Navbar always shows */}
-      <Navbar user={user || dummyUser} />
+      alert("User deleted successfully!");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error(err.message);
+        alert(err.message);
+      } else {
+        console.error(err);
+        alert("Error deleting user");
+      }
+    }
+  };
 
-      <Box p={8}>
-        <Stack gap={4}>
-          <Heading>Manage Users</Heading>
+     return (
+    <Box minH="100vh" bg="#f7f9fc">
+      <Navbar />
+      <Box maxW="6xl" mx="auto" py={10} px={6}>
+        <Heading mb={8} textAlign="center" color="#2b6cb0">
+          Manage Users
+        </Heading>
 
-          {loading && <Spinner size="xl" />}
+        {loading ? (
+          <Center h="50vh">
+            <Spinner size="xl" color="#2b6cb0" />
+          </Center>
+        ) : users.length ? (
+          <VStack gap={5} align="stretch">
+            {users.map((u) => (
+              <Box
+                key={u.id}
+                p={6}
+                borderRadius="lg"
+                shadow="md"
+                bg="white"
+                _hover={{ shadow: "lg", transform: "scale(1.01)" }}
+                transition="all 0.2s ease-in-out"
+              >
+                <Stack
+                  direction={{ base: "column", md: "row" }}
+                  justify="space-between"
+                  align="center"
+                >
+                  {/* User Info */}
+                  <Box>
+                    <Text fontWeight="bold" fontSize="xl" color="#1a202c">
+                      {u.username}
+                    </Text>
+                    <Text fontSize="sm" color="gray.600">
+                      Email: {u.email}
+                    </Text>
+                    <Text fontSize="sm" color="gray.600">
+                      Date Joined: {u.date_joined}
+                    </Text>
 
-          {!loading && users.length === 0 && (
-            <Text>No users found.</Text>
-          )}
+                    <HStack mt={2} gap={2}>
+                      <Box
+                        px={2}
+                        py={1}
+                        borderRadius="md"
+                        bg={u.role === "admin" ? "red.100" : u.role === "editor" ? "blue.100" : "gray.200"}
+                        color={u.role === "admin" ? "red.600" : u.role === "editor" ? "blue.600" : "gray.600"}
+                        fontWeight="bold"
+                        fontSize="xs"
+                      >
+                        {u.role.toUpperCase()}
+                      </Box>
 
-          {users.map((user) => (
-            <Box
-              key={user.id}
-              p={4}
-              borderWidth={1}
-              borderRadius="md"
-              display="flex"
-              alignItems="center"
-              justifyContent="space-between"
-            >
-              <Box>
-                <Text><strong>ID:</strong> {user.id}</Text>
-                <Text><strong>Username:</strong> {user.username}</Text>
-                <Text><strong>Email:</strong> {user.email}</Text>
-                <Text><strong>Active:</strong> {user.is_active ? "Yes" : "No"}</Text>
-                <Text><strong>Superuser:</strong> {user.is_superuser ? "Yes" : "No"}</Text>
+                      <Box
+                        px={2}
+                        py={1}
+                        borderRadius="md"
+                        bg={u.is_active ? "green.100" : "orange.100"}
+                        color={u.is_active ? "green.600" : "orange.600"}
+                        fontWeight="bold"
+                        fontSize="xs"
+                      >
+                        {u.is_active ? "ACTIVE" : "INACTIVE"}
+                      </Box>
+                    </HStack>
+                  </Box>
+
+                  {/* Action Buttons */}
+                  <HStack gap={3} mt={{ base: 4, md: 0 }}>
+                    <Button
+                      size="sm"
+                      bg="blue.500"
+                      color="white"
+                      _hover={{ bg: "blue.600" }}
+                      onClick={() => handleChangeRole(u.id, "editor")}
+                    >
+                      Make Editor
+                    </Button>
+                    <Button
+                      size="sm"
+                      bg="purple.500"
+                      color="white"
+                      _hover={{ bg: "purple.600" }}
+                      onClick={() => handleChangeRole(u.id, "viewer")}
+                    >
+                      Make Viewer
+                    </Button>
+                    <Button
+                      size="sm"
+                      bg={u.is_active ? "orange.400" : "green.400"}
+                      color="white"
+                      _hover={{ bg: u.is_active ? "orange.500" : "green.500" }}
+                      onClick={() => handleToggleActive(u.id, u.is_active)}
+                    >
+                      {u.is_active ? "Deactivate" : "Activate"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      bg="red.500"
+                      color="white"
+                      _hover={{ bg: "red.600" }}
+                      onClick={() => handleDeleteUser(u.id)}
+                    >
+                      Delete
+                    </Button>
+                  </HStack>
+                </Stack>
               </Box>
-              <Stack direction="row" gap={2}>
-                <Button size="sm" onClick={() => toggleActive(user)}>
-                  {user.is_active ? "Deactivate" : "Activate"}
-                </Button>
-                {!user.is_superuser && (
-                  <Button size="sm" colorScheme="red" onClick={() => deleteUser(user.id)}>
-                    Delete
-                  </Button>
-                )}
-              </Stack>
-            </Box>
-          ))}
-        </Stack>
+            ))}
+          </VStack>
+        ) : (
+          <Center>
+            <Text color="gray.500">No users found.</Text>
+          </Center>
+        )}
       </Box>
-    </>
+    </Box>
   );
 }

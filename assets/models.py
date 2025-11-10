@@ -1,45 +1,82 @@
 import uuid
 from django.db import models
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.conf import settings
+from django.utils import timezone
 
+class UserManager(BaseUserManager):
+    def create_user(self, email, username, password=None, **extra_fields):
+        """
+        Creates and saves a User with the given email, username, and password.
+        """
+        if not email:
+            raise ValueError('The Email must be set')
+        if not username:
+            raise ValueError('The Username must be set')
+            
+        email = self.normalize_email(email)
+        user = self.model(email=email, username=username, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
 
-class AssetCategory(models.Model):
-    category_id = models.AutoField(primary_key=True)
-    category_name = models.CharField(max_length=100)
+    def create_superuser(self, email, username, password=None, **extra_fields):
+        """
+        Creates and saves a superuser with the given email, username, and password.
+        """
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('role', 'admin') # Set role to admin for superusers
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+
+        return self.create_user(email, username, password, **extra_fields)
+
+class User(AbstractBaseUser, PermissionsMixin):
+    ROLE_CHOICES = (
+        ('user', 'User'),
+        ('admin', 'Admin'),
+        ('viewer','Viewer'),
+        ('editor','Editor'),
+    )
+
+    email = models.EmailField(unique=True)
+    username = models.CharField(max_length=150, unique=True)
+    first_name = models.CharField(max_length=150, blank=True)
+    last_name = models.CharField(max_length=150, blank=True)
+    
+    # Role field
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='user')
+
+    is_staff = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    date_joined = models.DateTimeField(default=timezone.now)
+
+    # Use the custom manager
+    objects = UserManager()
+
+    # Set the email field as the unique identifier for logging in
+    USERNAME_FIELD = 'email'
+    # List of fields required when creating a user via createsuperuser
+    REQUIRED_FIELDS = ['username']
 
     def __str__(self):
-        return self.category_name
-
-
-class Tag(models.Model):
-    tag_id = models.AutoField(primary_key=True)
-    tag_name = models.CharField(max_length=50)
-
-    def __str__(self):
-        return self.tag_name
-
+        return self.email
 
 class Asset(models.Model):
-    asset_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    asset_name = models.CharField(max_length=255)
+    # This stores the file itself. `upload_to` defines the sub-directory
+    file = models.FileField(upload_to='uploads/%Y/%m/%d/')
+    name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    file_type = models.CharField(max_length=50, blank=True, null=True)
-    file_extension = models.CharField(max_length=10, blank=True, null=True)
-    storage_path = models.CharField(max_length=512, blank=True, null=True)
-    file_size_bytes = models.BigIntegerField(blank=True, null=True)
-    upload_date = models.DateTimeField(auto_now_add=True)
-    uploader_id = models.IntegerField()
-    category = models.ForeignKey(AssetCategory, on_delete=models.SET_NULL, null=True)
-    is_deleted = models.BooleanField(default=False)
-    tags = models.ManyToManyField('Tag', through='AssetTag', related_name='assets')
+    category = models.CharField(max_length=50) # Image, PDF, Video, Document, Other
+    tags = models.CharField(max_length=255, blank=True, help_text="Comma separated tags")
+    file_size = models.BigIntegerField(help_text="File size in bytes")
+    
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.asset_name
-
-
-class AssetTag(models.Model):
-    asset_tag_id = models.AutoField(primary_key=True)
-    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
-    tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f"{self.asset.asset_name} - {self.tag.tag_name}"
+        return self.name
