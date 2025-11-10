@@ -153,8 +153,9 @@ class AssetViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='search')
     def search_assets(self, request):
-        qs = self.queryset
-        user = request.user
+        # Start with fresh queryset
+        qs = Asset.objects.all().order_by('-uploaded_at')
+
         keyword = request.query_params.get('keyword')
         category = request.query_params.get('category')
         tags = request.query_params.get('tag')
@@ -162,29 +163,29 @@ class AssetViewSet(viewsets.ModelViewSet):
         date_from = request.query_params.get('date_from')
         date_to = request.query_params.get('date_to')
 
-        # Keyword
+        # Keyword filter
         if keyword:
             qs = qs.filter(Q(name__icontains=keyword) | Q(description__icontains=keyword))
-        # Category
-        if category == 'all' or category is None:
-            qs = Asset.objects.all()  
-        else:
-            qs = Asset.objects.filter(category=category)
 
-        # Tags
+        # Category filter
+        if category and category.lower() != 'all':
+            qs = qs.filter(category=category)
+
+        # Tags filter
         if tags:
             tag_list = [t.strip() for t in tags.split(',')]
             tag_filter = Q()
             for t in tag_list:
                 tag_filter |= Q(tags__icontains=t)
             qs = qs.filter(tag_filter)
+
         # Date filters
         if date_from:
             qs = qs.filter(uploaded_at__date__gte=date_from)
         if date_to:
             qs = qs.filter(uploaded_at__date__lte=date_to)
 
-        # Role-based access
+        # User filter
         if selected_user:
             qs = qs.filter(uploaded_by__username=selected_user)
 
